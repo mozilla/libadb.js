@@ -1,0 +1,3 @@
+[submodule "addon-sdk"]
+	path = addon-sdk
+	url = git://github.com/mykmelez/addon-sdk.git

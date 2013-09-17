@@ -1,0 +1,16 @@
+{
+  "id": "libadb.js@mozilla.org",
+  "name": "adb",
+  "version": "0.1",
+  "fullName": "libadb.js",
+  "description": "ADB Javascript library for mozilla runtime",
+  "author": "Brandon Kase (https://github.com/bkase)",
+  "contributors": [
+    "Alexandre Poirot (https://github.com/ochameau)",
+    "Brendan Dahl (https://github.com/brendandahl)",
+    "Myk Melez (https://github.com/mykmelez)"
+  ],
+  "license": "MPL 2.0",
+  "unpack": true,
+  "dependencies": []
+}

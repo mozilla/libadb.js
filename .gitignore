@@ -1,0 +1,18 @@
+# platform-specific directories containing ADB binaries
+addon/data/mac64/adb
+addon/data/linux/adb
+addon/data/linux64/adb
+addon/data/win32/adb
+
+# native code objects not covered by standard global gitignores
+android-tools/adb-bin/adb
+android-tools/adb-bin/*.obj
+android-tools/win-out
+*.idb
+*.pdb
+obj*_*_x86
+build*_*_x86*
+
+# local build configuration options
+local.mk
+
