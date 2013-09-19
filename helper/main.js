@@ -1,5 +1,5 @@
 console.log("A");
-let {Cu} = require("chrome");
+let {Cu, Ci} = require("chrome");
 let adb = require("adb");
 const events = require("sdk/event/core");
 console.log("B");
@@ -12,6 +12,9 @@ console.log("B2");
 let {Devices} = Cu.import("resource://gre/modules/devtools/Devices.jsm");
 console.log("C");
 
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://gre/modules/Services.jsm");
+
 Devices.helperAddonInstalled = true;
 exports.shutdown = function() {
   Devices.helperAddonInstalled = false;
@@ -21,22 +24,50 @@ console.log("D");
 // start automatically start tracking devices
 adb.start();
 console.log("E");
+
 function onDeviceConnected(device) {
   console.log("ADBHELPER - CONNECTED: " + device);
   Devices.register(device, {
     connect: function () {
       let port = ConnectionManager.getFreeTCPPort();
-      let local = "tcp:" + port;
+      // let local = "tcp:" + port;
       let remote = "localfilesystem:/data/local/debugger-socket";
-      return adb.forwardPort(local, remote)
-                .then(() => port);
+      return adb.forwardPort(port, remote)
+                .then(() => port, console.error);
     }
   });
 }
 
-events.on(adb, "device-connected", onDeviceConnected);
-
-events.on(adb, "device-disconnected", function (device) {
+function onDeviceDisconnected(device) {
   console.log("ADBHELPER - DISCONNECTED: " + device);
   Devices.unregister(device);
-});
+}
+
+let observer = {
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver,
+                                         Ci.nsISupportsWeakReference]),
+  observe: function observe(subject, topic, data) {
+    console.log("simulator.observe: " + topic);
+    switch (topic) {
+      case "adb-ready":
+        console.log("adb-ready");
+        break;
+      case "adb-device-connected":
+        console.log("adb-device-connected");
+        onDeviceConnected(data);
+        break;
+      case "adb-device-disconnected":
+        console.log("adb-device-disconnected");
+        onDeviceDisconnected(data);
+        break;
+      case "adb-port-in-use":
+        console.log("adb-port-in-use");
+        break;
+    }
+  }
+};
+
+Services.obs.addObserver(observer, "adb-ready", true);
+Services.obs.addObserver(observer, "adb-device-connected", true);
+Services.obs.addObserver(observer, "adb-device-disconnected", true);
+Services.obs.addObserver(observer, "adb-port-in-use", true);
