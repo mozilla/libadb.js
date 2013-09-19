@@ -132,7 +132,7 @@ exports = module.exports = {
     // nop -- we automatically start tracking devices
   },
 
-  forwardPort: function forwardPort(port) {
+  forwardPort: function forwardPort(port, remote) {
     let deferred = Promise.defer();
     if (!deviceTracker.hasDevice) {
       deferred.reject(DEVICE_NOT_CONNECTED);
@@ -140,7 +140,7 @@ exports = module.exports = {
     }
 
     // <host-prefix>:forward:<local>;<remote>
-    let service = "host:forward:tcp:" + port + ";tcp:6000";
+    let service = "host:forward:tcp:" + port + ";" + (remote || "tcp:6000");
 
     queryService(service, deferred);
 
