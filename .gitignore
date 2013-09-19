@@ -12,6 +12,7 @@ android-tools/win-out
 *.pdb
 obj*_*_x86
 build*_*_x86*
+*.o
 
 # local build configuration options
 local.mk

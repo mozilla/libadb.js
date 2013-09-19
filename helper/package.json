@@ -1,0 +1,13 @@
+{
+  "id": "adbhelper@mozilla.org",
+  "name": "adbhelper",
+  "version": "0.1",
+  "fullName": "adb helper",
+  "description": "ADB helper",
+  "author": "Alexandre Poirot (https://github.com/ochameau)",
+  "contributors": [
+  ],
+  "license": "MPL 2.0",
+  "unpack": true,
+  "dependencies": ["adb"]
+}

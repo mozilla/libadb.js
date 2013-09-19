@@ -153,7 +153,9 @@ adb:
 	fi;
 
 run:
-	cd addon-sdk && . bin/activate && cd ../addon && cfx run $(BIN_ARG) $(PROFILE_ARG)
+	mkdir -p helper/data/$(PLATFORM)/adb
+	cp addon/data/$(PLATFORM)/adb/* helper/data/$(PLATFORM)/adb/
+	cd addon-sdk && . bin/activate && cd ../helper && cfx run --package-path ../addon/ $(BIN_ARG) $(PROFILE_ARG)
 
 package:
 	cd addon-sdk && . bin/activate && cd ../addon && cfx xpi
