@@ -1,29 +1,25 @@
-console.log("A");
 let {Cu, Ci} = require("chrome");
 let adb = require("adb");
 const events = require("sdk/event/core");
-console.log("B");
+const unload = require('sdk/system/unload');
 
 const {devtools} = Cu.import("resource://gre/modules/devtools/Loader.jsm", {});
-console.log("B1");
 const devtoolsRequire = devtools.require;
 const {ConnectionManager} = devtoolsRequire("devtools/client/connection-manager");
-console.log("B2");
 let {Devices} = Cu.import("resource://gre/modules/devtools/Devices.jsm");
-console.log("C");
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 Devices.helperAddonInstalled = true;
-exports.shutdown = function() {
+
+unload.when(function () {
   Devices.helperAddonInstalled = false;
-  adb.kill(true);
-}
-console.log("D");
+  adb.close();
+});
+
 // start automatically start tracking devices
 adb.start();
-console.log("E");
 
 function onDeviceConnected(device) {
   console.log("ADBHELPER - CONNECTED: " + device);
@@ -47,7 +43,6 @@ let observer = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver,
                                          Ci.nsISupportsWeakReference]),
   observe: function observe(subject, topic, data) {
-    console.log("simulator.observe: " + topic);
     switch (topic) {
       case "adb-ready":
         console.log("adb-ready");
