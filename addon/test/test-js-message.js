@@ -34,7 +34,7 @@ let libPath = URL.toFilename(self.data.url(platformDir + "/adb/libtest" + extens
 let hasLib;
 let libtest;
 
-let jsMsgFn = function js_msg(channel, args) {
+let jsMsgCallback = JsMsgType.ptr(function js_msg(channel, args) {
   switch (channel.readString()) {
     case "test1":
       let [x, y] = JsMessage.unpack(args, ctypes.int, ctypes.int);
@@ -45,7 +45,7 @@ let jsMsgFn = function js_msg(channel, args) {
     default:
       return JsMessage.pack(-1, Number);
   }
-};
+});
 
 exports["test a if libtest exists"] = function(assert, done) {
   hasLib = File.exists(libPath);
@@ -69,7 +69,7 @@ exports["test b init"] = function(assert, done) {
                   args: [ JsMsgType.ptr ]
                 }, libtest);
 
-  install_js_msg(JsMsgType.ptr(jsMsgFn));
+  install_js_msg(jsMsgCallback);
 
   I.declare({ name: "call_test1",
               returns: ctypes.int,
