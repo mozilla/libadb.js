@@ -158,7 +158,7 @@ run:
 	cd addon-sdk && . bin/activate && cd ../helper && cfx run --package-path ../addon/ $(BIN_ARG) $(PROFILE_ARG)
 
 package:
-	cd addon-sdk && . bin/activate && cd ../addon && cfx xpi
+	cd addon-sdk && . bin/activate && cd ../helper && cfx xpi --package-path ../addon/
 
 test:
 	cd addon-sdk && . bin/activate && cd ../addon && cfx test --verbose $(BIN_ARG) $(TEST_ARG) $(PROFILE_ARG)
