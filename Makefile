@@ -1,4 +1,4 @@
-.PHONY: build clean adb run package test help
+.PHONY: build clean adb helper run package test help
 
 -include local.mk
 
@@ -117,7 +117,7 @@ endif
 
 ADB_DATA_PATH = addon/data/$(PLATFORM)/adb
 
-build: adb
+build: adb helper
 
 clean:
 	rm -rf addon/data/$(PLATFORM)
@@ -152,9 +152,11 @@ adb:
 	  cp $(ADB_LIBS) $(ADB_DATA_PATH); \
 	fi;
 
-run:
+helper:
 	mkdir -p helper/data/$(PLATFORM)/adb
 	cp addon/data/$(PLATFORM)/adb/* helper/data/$(PLATFORM)/adb/
+
+run:
 	cd addon-sdk && . bin/activate && cd ../helper && cfx run --package-path ../addon/ $(BIN_ARG) $(PROFILE_ARG)
 
 package:
