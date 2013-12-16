@@ -24,9 +24,15 @@
                 args: [ctypes.int, ctypes.char.ptr, ctypes.int]
               }, lib);
 
+    I.declare({ name: "close_fd",
+                returns: ctypes.void_t,
+                args: [ctypes.int]
+              }, lib);
+
     return {
       writeFully: function writeFully(fd, toWriteS, length) { 
         let write = I.use("write_fd");
+        let close = I.use("close_fd");
         let val = eval(toWriteS);
         let buffer = ctypes.cast(val.address(), ctypes.char.ptr);
         let r;
@@ -38,16 +44,19 @@
             buffer += r;
           } else {
             if (r < 0) {
+              close(fd);
               return -1; 
             }
           }
         }
 
+        close(fd);
         return 0;
       },
 
       readStringFully: function readStringFully(fd, tag, onData) {
         let read = I.use("read_fd");
+        let close = I.use("close_fd");
         let size = 4096;
         let buffer = new ctypes.ArrayType(ctypes.char, 4096)();
 
@@ -62,6 +71,7 @@
           }
         }
 
+        close(fd);
         return 0;
       }
     };

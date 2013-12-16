@@ -14,7 +14,7 @@ ADB_MUTEX(transport_lock)
 ADB_MUTEX(local_transports_lock)
 //#endif
 ADB_MUTEX(usb_lock)
-ADB_MUTEX(should_kill_lock)
+ADB_MUTEX(device_loop_state_lock)
 
 // Sadly logging to /data/adb/adb-... is not thread safe.
 //  After modifying adb.h::D() to count invocations:
