@@ -43,6 +43,7 @@ struct usb_handle
     IOUSBInterfaceInterface   **interface;
     io_object_t               usbNotification;
     unsigned int              zero_mask;
+    adb_mutex_t               lock;
 };
 
 static CFRunLoopRef currentRunLoop = 0;
@@ -339,6 +340,7 @@ CheckInterface(IOUSBInterfaceInterface **interface, UInt16 vendor, UInt16 produc
         goto err_bad_adb_interface;
 
     handle = (usb_handle *)calloc(1, sizeof(usb_handle));
+    adb_mutex_init(&handle->lock, 0);
 
     //* Iterate over the endpoints for this interface and find the first
     //* bulk in/out pipes available.  These will be our read/write pipes.
@@ -546,11 +548,15 @@ void usb_kick(usb_handle *handle)
     /* release the interface */
     if (!handle)
         return;
+    adb_mutex_lock(&handle->lock);
 
     if (handle->interface)
     {
+        (*handle->interface)->AbortPipe(handle->interface, handle->bulkIn);
+        (*handle->interface)->AbortPipe(handle->interface, handle->bulkOut);
         (*handle->interface)->USBInterfaceClose(handle->interface);
         (*handle->interface)->Release(handle->interface);
         handle->interface = 0;
     }
+    adb_mutex_unlock(&handle->lock);
 }
