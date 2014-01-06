@@ -55,9 +55,11 @@ export ADB_AUTH
 # Platform-specific Defines
 ifeq (win32, $(PLATFORM))
   ADB_PACKAGE = libadb-$(LIBADB_VERSION)-windows.zip
-  DEPS = AdbWinApi.dll
-  ADB_BINARIES = libadb.dll $(DEPS)
   LIB_SUFFIX = .dll
+  ADB_BINARIES = \
+    libadb$(LIB_SUFFIX) \
+    AdbWinApi$(LIB_SUFFIX) \
+    AdbWinUsbApi$(LIB_SUFFIX)
 
   ADB_OUT_DIR = android-tools/win-out
   ADB_DRIVERS_DIR = android-tools/adb-win-api
@@ -69,8 +71,8 @@ ifeq (win32, $(PLATFORM))
 else
 ifeq (mac64, $(PLATFORM))
   ADB_PACKAGE = libadb-$(LIBADB_VERSION)-mac.zip
-  ADB_BINARIES = libadb.so
   LIB_SUFFIX = .so
+  ADB_BINARIES = libadb$(LIB_SUFFIX)
   ADB_OUT_DIR = android-tools/adb-bin
   ADB_LIBS = \
     $(ADB_OUT_DIR)/libadb$(LIB_SUFFIX) \
@@ -80,8 +82,8 @@ ifeq (mac64, $(PLATFORM))
 else
 ifeq (linux64, $(PLATFORM))
   ADB_PACKAGE = libadb-$(LIBADB_VERSION)-linux64.zip
-  ADB_BINARIES = libadb.so
   LIB_SUFFIX = .so
+  ADB_BINARIES = libadb$(LIB_SUFFIX)
   ADB_OUT_DIR = android-tools/adb-bin
   ADB_LIBS = \
     $(ADB_OUT_DIR)/libadb$(LIB_SUFFIX) \
@@ -89,8 +91,8 @@ ifeq (linux64, $(PLATFORM))
 else
 ifeq (linux, $(PLATFORM))
   ADB_PACKAGE = libadb-$(LIBADB_VERSION)-linux.zip
-  ADB_BINARIES = libadb.so
   LIB_SUFFIX = .so
+  ADB_BINARIES = libadb$(LIB_SUFFIX)
   ADB_OUT_DIR = android-tools/adb-bin
   ADB_LIBS = \
     $(ADB_OUT_DIR)/libadb$(LIB_SUFFIX) \
@@ -141,7 +143,7 @@ adb:
 	cd addon/data/$(PLATFORM) && rm -rf adb $(ADB_BINARIES)
 	mkdir addon/data/$(PLATFORM)/adb
 	if [ ! -f $(ADB_PACKAGE) ] && \
-		 ( [ "$(LIBADB_LOCATION)" = "remote" ] || [ $(DEPS) ] ); then \
+		 ( [ "$(LIBADB_LOCATION)" = "remote" ] ); then \
 	  $(DOWNLOAD_CMD) $(ADB_URL); \
 	fi;
 	if [ -f $(ADB_PACKAGE) ]; then \
