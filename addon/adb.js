@@ -113,6 +113,9 @@ exports = module.exports = {
   set ready(newVal) { ready = newVal },
 
   start: function start() {
+    if (ready) {
+      return;
+    }
     let startedSuccessfully = this._startAdbInBackground();
     this.didRunInitially = startedSuccessfully;
   },
@@ -172,22 +175,18 @@ exports = module.exports = {
       return;
     }
     hasStartedShutdown = true;
+    ready = false;
     let t0 = Date.now();
     console.log("Closing ADB");
     let x = 1;
-    deviceTracker.stop();
     console.debug("After stopTrackingDevices");
 
-    if (context.outputThread && platform != "winnt") {
-      console.debug("Terminating outputThread");
-      context.outputThread.terminate();
+    blockingNative.killDeviceLoop();
+
+    if (context.outputThread) {
       blockingNative.killIOPump(context.t_ptrS);
     }
 
-    // Windows: kills device loop, output thread, input thread (up to 100ms)
-    // OSX: kills device loop (returns immediately might take 100ms to finish)
-    // Linux: kills nothing
-    blockingNative.killNativeSafely();
     console.debug("killAck received");
     // this ioWorker writes to the die_fd which wakes of the fdevent_loop which will then die and return to JS
     let res = blockingNative.writeFully(server_die_fd, "ctypes.int(0xDEAD)", 4);
@@ -199,9 +198,11 @@ exports = module.exports = {
       console.debug("Killing Worker: " + w.tag)
       w.terminate();
     });
+    context.__workers = [];
     console.debug("ALL workers are terminated");
     let t1 = Date.now();
     console.log("ADB closed in " + (t1 - t0) + "ms");
+    deviceTracker.stop();
   }
 };
 
@@ -231,7 +232,8 @@ exports.restart = function restart() {
   exports.close();
 
   if (!hasRestarted) {
-    debug("ADB is restarting");
+    console.debug("ADB is restarting");
+    hasRestarted = true;
     // This timeout is temporarily here because native code routines need a
     // bit of extra time to close since they do not close fully synchronously.
     // More exploration is needed before this is resolved, but here is a general
@@ -242,7 +244,6 @@ exports.restart = function restart() {
     // immediately after the native file descriptor write returns
     timers.setTimeout(function timeout() {
       reset();
-      hasRestarted = true;
       exports._startAdbInBackground();
     }, 200);
   } else {

@@ -46,6 +46,7 @@ int SHELL_EXIT_NOTIFY_FD = -1;
 
 // this gets set to 1 by the JS DIE fde
 static int SHOULD_DIE = 0;
+static fdevent *fde_die;
 
 static void fatal(const char *fn, const char *fmt, ...)
 {
@@ -698,7 +699,10 @@ static void fdevent_exit_func(int fd, unsigned ev, void * userdata) {
 
          if (death == 0xDEAD) {
            D("Got should die change\n");
-            SHOULD_DIE = 1;
+           SHOULD_DIE = 1;
+           fdevent_del(fde_die, FDE_READ);
+           fdevent_destroy(fde_die);
+           fde_die = NULL;
          } else {
            D("suicide\n");
            // abort
@@ -708,11 +712,12 @@ static void fdevent_exit_func(int fd, unsigned ev, void * userdata) {
 }
 
 void fdevent_js_die_setup(int js_die_fd) {
-    fdevent *fde;
-    fde = fdevent_create(js_die_fd, fdevent_exit_func, NULL);
-    if(!fde)
+    if(fde_die)
+        FATAL("fde_die wasn't removed.\n");
+    fde_die = fdevent_create(js_die_fd, fdevent_exit_func, NULL);
+    if(!fde_die)
         FATAL("cannot create fdevent for js-exit handler\n");
-    fdevent_add(fde, FDE_READ);
+    fdevent_add(fde_die, FDE_READ);
     D("Added FDE");
 }
 
@@ -730,6 +735,7 @@ void fdevent_loop(int js_die_fd)
         while((fde = fdevent_plist_dequeue())) {
             fdevent_call_fdfunc(fde);
             if (SHOULD_DIE) {
+              SHOULD_DIE = 0;
               D("Exiting loop\n");
               return;
             }

@@ -42,6 +42,7 @@
 #if ADB_TRACE
 ADB_MUTEX_DEFINE( D_lock );
 #endif
+ADB_MUTEX_DEFINE( device_loop_state_lock );
 
 // write to debug file
 FILE* debugLog;
@@ -59,6 +60,7 @@ int gListenAll = 0;
 static int auth_enabled = 0;
 
 static void remove_all_listeners(void);
+static void remove_smart_socket_listeners(void);
 
 ADB_MUTEX_DEFINE( threads_active_lock );
 
@@ -117,6 +119,33 @@ int adb_thread_create( adb_thread_t  *thread, adb_thread_func_t  start, void*  a
   return err;
 }
 
+static int device_loop_state = kDeviceLoopDead;
+void _kill_device_loop() {
+  D("Killing device loop.\n");
+  if (get_device_loop_state() != kDeviceLoopRunning) {
+    D("Warning: attempt to kill a device loop that isn't running!\n");
+    return;
+  }
+  set_device_loop_state(kDeviceLoopKilling);
+  while (get_device_loop_state() == kDeviceLoopKilling) {
+    adb_sleep_ms(10);
+  }
+  D("Device loop is dead.\n");
+}
+
+int get_device_loop_state() {
+  adb_mutex_lock(&device_loop_state_lock);
+  int tmp = device_loop_state;
+  adb_mutex_unlock(&device_loop_state_lock);
+  return tmp;
+}
+
+void set_device_loop_state(int state) {
+  adb_mutex_lock(&device_loop_state_lock);
+  device_loop_state = state;
+  adb_mutex_unlock(&device_loop_state_lock);
+}
+
 void cleanup_all() {
   int err = 0;
   int i = 0;
@@ -153,12 +182,6 @@ void cleanup_all() {
   free_adb_thread_ptr_array_list(__adb_threads_active);
   free_str_array_list(__adb_tags_active);
   D("Killed all threads!\n");
-  D("Freeing data\n");
-  cleanup_transport();
-  D("Done freeing data\n");
-  D("Removing all listeners on sockets\n");
-  remove_all_listeners();
-  D("Done removing all listeners\n");
 #ifdef WIN32
     fclose(LOG_FILE); // close the log
     _cleanup_winsock(); // cleanup sockets
@@ -854,6 +877,18 @@ static void remove_all_listeners(void)
     }
 }
 
+static void remove_smart_socket_listeners(void)
+{
+    D("removing smark socket listeners\n");
+    alistener *l, *l_next;
+    for (l = listener_list.next; l != &listener_list; l = l_next) {
+        l_next = l->next;
+        if (l->connect_to[0] != '*')
+            continue;
+        listener_disconnect(l, l->transport);
+    }
+}
+
 // error/status codes for install_listener.
 typedef enum {
   INSTALL_STATUS_OK = 0,
@@ -1172,6 +1207,16 @@ void build_local_name(char* target_str, size_t target_size, int server_port)
 }
 
 int server_thread(void * args) {
+  // Kill a server if there is one already running.
+  int fd = _adb_connect("host:version");
+  if (fd >= 0) {
+    D("ADB server found, killing.\n");
+    fd = _adb_connect("host:kill");
+    adb_close(fd);
+    // XXX: As noted in the original adb_connect, there's probably a better way
+    // to detect the server death.
+    adb_sleep_ms(2000);
+  }
 
   struct adb_main_input* input = (struct adb_main_input*)args;
   int is_daemon = input->is_daemon;
@@ -1242,6 +1287,17 @@ int server_thread(void * args) {
     D("Starting event loop...\n");
     fdevent_loop(exit_fd);
     D("Done with loop\n");
+
+    D("Freeing data\n");
+    // cleanup_transport();
+    D("Done freeing data\n");
+    D("Removing all listeners on sockets\n");
+    remove_all_listeners();
+    D("Done removing all listeners\n");
+
+    // By now the smart sockets are hopefully not in use and can be
+    // removed.
+    remove_smart_socket_listeners();
 
     for (int i = 0; i < _fds->length; i++) {
       D("Closing fd: %d at index: %d\n", _fds->base[i], i);

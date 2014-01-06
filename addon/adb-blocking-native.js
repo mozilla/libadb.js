@@ -37,12 +37,10 @@ module.exports = {
                 args: [ ]
               }, libadb);
 
-    if (platform === "darwin") {
-      I.declare({ name: "kill_threads",
-                  returns: ctypes.void_t,
-                  args: []
-                }, libadb);
-    }
+    I.declare({ name: "kill_device_loop",
+                returns: ctypes.void_t,
+                args: []
+              }, libadb);
 
     if (platform === "winnt") {
       libadbdrivers = ctypes.open(driversPath);
@@ -73,11 +71,8 @@ module.exports = {
     }
   },
 
-  killNativeSafely: function killNativeSafely() {
-    // Only OSX needs the device loop killed.
-    if (platform === "darwin") {
-      I.use("kill_threads")();
-    }
+  killDeviceLoop: function killDeviceLoop() {
+    I.use("kill_device_loop")();
   },
 
   waitForServerDeath: function waitForServerDeath() {
@@ -86,6 +81,11 @@ module.exports = {
     }
   },
 
+  /**
+   * Killing the IO pump will bring down the output thread, which in turn will
+   * cause the input thread to terminate as well.
+   * @param t_ptrS Pointer to the the transport object.
+   */
   killIOPump: function killIOPump(t_ptrS) {
     let t_ptr = unpackPtr(t_ptrS, atransport.ptr);
     let close_handle_func;

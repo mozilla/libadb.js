@@ -84,9 +84,6 @@ static usb_handle handle_list = {
   /* .next = */ &handle_list,
 };
 
-/// Locker for the should_kill signal
-ADB_MUTEX_DEFINE( should_kill_lock );
-
 /// Locker for the list of opened usb handles
 ADB_MUTEX_DEFINE( usb_lock );
 
@@ -199,9 +196,14 @@ void* device_poll_thread(void* _bridge) {
   D("Created device thread\n");
 
   int i = 0;
+  set_device_loop_state(kDeviceLoopRunning);
   while(1) {
+    if (get_device_loop_state() == kDeviceLoopKilling) {
+      D("Terminatining device loop.\n");
+      break;
+    }
     if(i % 10 == 0) {
-      D("In the if-statement");
+      D("In the if-statement\n");
       find_devices();
       i = 1;
     } else {
@@ -210,7 +212,7 @@ void* device_poll_thread(void* _bridge) {
 
     adb_sleep_ms(100);
   }
-
+  set_device_loop_state(kDeviceLoopDead);
   return NULL;
 }
 

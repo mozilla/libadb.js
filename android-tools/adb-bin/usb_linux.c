@@ -684,12 +684,17 @@ fail:
 void* device_poll_thread(void* unused)
 {
     D("Created device thread\n");
+    set_device_loop_state(kDeviceLoopRunning);
     for(;;) {
+        if (get_device_loop_state() == kDeviceLoopKilling) {
+            break;
+        }
             /* XXX use inotify */
         find_usb_device("/dev/bus/usb", register_device);
         kick_disconnected_devices();
         sleep(1);
     }
+    set_device_loop_state(kDeviceLoopDead);
     return NULL;
 }
 

@@ -43,13 +43,12 @@ struct usb_handle
     IOUSBInterfaceInterface   **interface;
     io_object_t               usbNotification;
     unsigned int              zero_mask;
+    adb_mutex_t               lock;
 };
 
 static CFRunLoopRef currentRunLoop = 0;
 static pthread_mutex_t start_lock;
 static pthread_cond_t start_cond;
-
-ADB_MUTEX_DEFINE( should_kill_lock );
 
 static void AndroidInterfaceAdded(void *refCon, io_iterator_t iterator);
 static void AndroidInterfaceNotify(void *refCon, io_iterator_t iterator,
@@ -341,6 +340,7 @@ CheckInterface(IOUSBInterfaceInterface **interface, UInt16 vendor, UInt16 produc
         goto err_bad_adb_interface;
 
     handle = (usb_handle *)calloc(1, sizeof(usb_handle));
+    adb_mutex_init(&handle->lock, 0);
 
     //* Iterate over the endpoints for this interface and find the first
     //* bulk in/out pipes available.  These will be our read/write pipes.
@@ -383,30 +383,15 @@ err_get_num_ep:
     return NULL;
 }
 
-
-static int should_kill = 0;
-void should_kill_device_loop() {
-  adb_mutex_lock(&should_kill_lock);
-  should_kill = 1;
-  adb_mutex_unlock(&should_kill_lock);
-}
-
-static int get_should_kill() {
-  adb_mutex_lock(&should_kill_lock);
-  int tmp = should_kill;
-  adb_mutex_unlock(&should_kill_lock);
-  return tmp;
-}
-
-
 void onTimerFired(CFRunLoopTimerRef timer, void * info) {
-  if (get_should_kill()) {
-    adb_mutex_destroy(&should_kill_lock);
+  if (get_device_loop_state() == kDeviceLoopKilling) {
     D("Cleaning in timer handler\n");
+    CFRunLoopTimerInvalidate(timer);
     CFRunLoopStop(currentRunLoop);
   }
 }
 
+static int initialized = 0;
 void* RunLoopThread(void* args)
 {
     unsigned i;
@@ -424,7 +409,9 @@ void* RunLoopThread(void* args)
     adb_cond_signal(&start_cond);
     adb_mutex_unlock(&start_lock);
 
+    set_device_loop_state(kDeviceLoopRunning);
     CFRunLoopRun();
+    set_device_loop_state(kDeviceLoopDead);
     currentRunLoop = 0;
 
     for (i = 0; i < vendorIdCount; i++) {
@@ -432,14 +419,19 @@ void* RunLoopThread(void* args)
     }
     IONotificationPortDestroy(notificationPort);
 
-    usb_cleanup();
+    if (notificationIterators != NULL) {
+        D("Before notification free\n");
+        free(notificationIterators);
+        notificationIterators = NULL;
+    }
+    D("After all\n");
+    initialized = 0;
 
     DBG("RunLoopThread done\n");
     return NULL;    
 }
 
 
-static int initialized = 0;
 void usb_init()
 {
     if (!initialized)
@@ -469,20 +461,6 @@ void usb_init()
 
 void usb_cleanup()
 {
-    DBG("usb_cleanup\n");
-    close_usb_devices();
-    if (currentRunLoop) {
-        D("Before currentRunLoop stop\n");
-        CFRunLoopStop(currentRunLoop);
-    }
-
-    D("After currentRunLoop if\n");
-    if (notificationIterators != NULL) {
-        D("Before notification free\n");
-        free(notificationIterators);
-        notificationIterators = NULL;
-    }
-    D("After all\n");
 }
 
 int usb_write(usb_handle *handle, const void *buf, int len)
@@ -571,11 +549,15 @@ void usb_kick(usb_handle *handle)
     /* release the interface */
     if (!handle)
         return;
+    adb_mutex_lock(&handle->lock);
 
     if (handle->interface)
     {
+        (*handle->interface)->AbortPipe(handle->interface, handle->bulkIn);
+        (*handle->interface)->AbortPipe(handle->interface, handle->bulkOut);
         (*handle->interface)->USBInterfaceClose(handle->interface);
         (*handle->interface)->Release(handle->interface);
         handle->interface = 0;
     }
+    adb_mutex_unlock(&handle->lock);
 }
