@@ -386,6 +386,7 @@ err_get_num_ep:
 void onTimerFired(CFRunLoopTimerRef timer, void * info) {
   if (get_device_loop_state() == kDeviceLoopKilling) {
     D("Cleaning in timer handler\n");
+    CFRunLoopTimerInvalidate(timer);
     CFRunLoopStop(currentRunLoop);
   }
 }
