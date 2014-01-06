@@ -294,7 +294,7 @@ struct tmsg
 
 // a function carrier for a CFRunLoopTimerCallback
 struct func_carrier {
-  int (*should_kill)(void);
+  int (*kill_device_loop)(void);
 };
 
 #include "array_lists.h"
@@ -338,13 +338,15 @@ struct dll_bridge { };
 struct dll_io_bridge { };
 #endif
 
-#ifdef WIN32
-  int notify_should_kill();
-  void should_kill_threads();
-#endif
-#ifdef __APPLE__
-  void should_kill_device_loop();
-#endif
+typedef enum {
+        kDeviceLoopDead,
+        kDeviceLoopRunning,
+        kDeviceLoopKilling
+} device_loop_state_type;
+int get_device_loop_state();
+void set_device_loop_state(int state);
+void _kill_device_loop();
+
 void array_lists_init_();
 int adb_thread_create( adb_thread_t  *thread, adb_thread_func_t  start, void*  arg, char * tag );
 void dump_thread_tag();

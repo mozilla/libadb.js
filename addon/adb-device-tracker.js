@@ -50,7 +50,7 @@ module.exports = {
   },
 
   handleChange: function handleChange(msg) {
-    if (msg == "") {
+    if (!msg) {
       hasDevice = false;
       // All devices got disconnected.
       for (let dev in devices) {
@@ -88,6 +88,8 @@ module.exports = {
     if (listenId !== null) {
       worker.freeListener("device-update", listenId);
     }
+    // Disconnect all devices.
+    this.handleChange();
   },
 
   reset: function reset() {

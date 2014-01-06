@@ -157,6 +157,19 @@ _fh_to_int( FH  f )
     return -1;
 }
 
+void dump_open_fhs()
+{
+    int nn;
+    FH  f;
+
+    for (nn = 0; nn < WIN32_MAX_FHS; nn++) {
+        if ( _win32_fhs[nn].clazz != NULL) {
+            f = &_win32_fhs[nn];
+            D("FILE HANDLE: %d open\n", _fh_to_int(f));
+        }
+    }
+}
+
 static FH
 _fh_alloc( FHClass  clazz )
 {
@@ -362,9 +375,11 @@ int  adb_open(const char*  path, int  options)
         }
     }
 
-    snprintf( f->name, sizeof(f->name), "%d(%s)", _fh_to_int(f), path );
-    D( "adb_open: '%s' => fd %d\n", path, _fh_to_int(f) );
-    return _fh_to_int(f);
+    int fd = _fh_to_int(f);
+    snprintf( f->name, sizeof(f->name), "%d(%s)", fd, path );
+    D( "adb_open: '%s' => fd %d\n", path, fd );
+    close_on_exec(fd);
+    return fd;
 }
 
 /* ignore mode on Win32 */
@@ -405,9 +420,11 @@ int  adb_creat(const char*  path, int  mode)
                 return -1;
         }
     }
-    snprintf( f->name, sizeof(f->name), "%d(%s)", _fh_to_int(f), path );
-    D( "adb_creat: '%s' => fd %d\n", path, _fh_to_int(f) );
-    return _fh_to_int(f);
+    int fd = _fh_to_int(f);
+    snprintf( f->name, sizeof(f->name), "%d(%s)", fd, path );
+    D( "adb_creat: '%s' => fd %d\n", path, fd );
+    close_on_exec(fd);
+    return fd;
 }
 
 
@@ -572,6 +589,7 @@ void
 _cleanup_winsock( void )
 {
     WSACleanup();
+    _winsock_init = 0;
 }
 
 static void
@@ -784,9 +802,11 @@ int  adb_socket_accept(int  serverfd, struct sockaddr*  addr, socklen_t  *addrle
         return -1;
     }
 
-    snprintf( fh->name, sizeof(fh->name), "%d(accept:%s)", _fh_to_int(fh), serverfh->name );
-    D( "adb_socket_accept on fd %d returns fd %d\n", serverfd, _fh_to_int(fh) );
-    return  _fh_to_int(fh);
+    int fd = _fh_to_int(fh);
+    close_on_exec(fd);
+    snprintf( fh->name, sizeof(fh->name), "%d(accept:%s)", fd, serverfh->name );
+    D( "adb_socket_accept on fd %d returns fd %d\n", serverfd, fd );
+    return fd;
 }
 
 
@@ -1235,6 +1255,8 @@ int  adb_socketpair( int  sv[2] )
     snprintf( fa->name, sizeof(fa->name), "%d(pair:%d)", sv[0], sv[1] );
     snprintf( fb->name, sizeof(fb->name), "%d(pair:%d)", sv[1], sv[0] );
     D( "adb_socketpair: returns (%d, %d)\n", sv[0], sv[1] );
+    close_on_exec(sv[0]);
+    close_on_exec(sv[1]);
     return 0;
 
 Fail:
@@ -1930,6 +1952,8 @@ void fdevent_del(fdevent *fde, unsigned events)
 }
 
 static int SHOULD_DIE = 0;
+static fdevent *fde_die;
+
 static void fdevent_exit_func(int fd, unsigned ev, void * userdata) {
     printf("fdevent_exit_func was fired!!\n");
     if(ev & FDE_READ){
@@ -1941,7 +1965,10 @@ static void fdevent_exit_func(int fd, unsigned ev, void * userdata) {
 
          if (death == 0xDEAD) {
            printf("Got should die change\n");
-            SHOULD_DIE = 1;
+           SHOULD_DIE = 1;
+           fdevent_del(fde_die, FDE_READ);
+           fdevent_destroy(fde_die);
+           fde_die = NULL;
          } else {
            printf("suicide\n");
            // abort
@@ -1951,11 +1978,12 @@ static void fdevent_exit_func(int fd, unsigned ev, void * userdata) {
 }
 
 void fdevent_js_die_setup(int js_die_fd) {
-    fdevent *fde;
-    fde = fdevent_create(js_die_fd, fdevent_exit_func, NULL);
-    if(!fde)
+    if(fde_die)
+        FATAL("fde_die wasn't removed.\n");
+    fde_die = fdevent_create(js_die_fd, fdevent_exit_func, NULL);
+    if(!fde_die)
         FATAL("cannot create fdevent for js-exit handler\n");
-    fdevent_add(fde, FDE_READ);
+    fdevent_add(fde_die, FDE_READ);
     printf("Added FDE");
 }
 

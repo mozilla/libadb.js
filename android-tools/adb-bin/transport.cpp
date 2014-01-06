@@ -287,28 +287,16 @@ static void handle_output_offline(atransport * t) {
     }
 }
 
-static int started_output_cleanup = 0;
-static int ended_output_cleanup = 0;
-// this function should be called after the output thread is
-//    terminated from JS (i.e. doesn't execute
-//
-// TODO: RACE CONDITION HERE: if the WebWorker::terminate method 
-//    is called for output_thread just before or during the execution
-//    of these two handle_output_* functions, the transport may be unref'ed twice
-//    (and other sorts of bad things could happen)
-//
 void kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPIHANDLE)){
-    if (started_output_cleanup && !ended_output_cleanup) {
-      printf("******* BUG: Undefined behavior in race detected!\n");
-      return;
+    if (!t) {
+        // Nothing to do.
+        return;
     }
-
-    if (ended_output_cleanup) {
-      return; // nothing to do
-    }
-
-    handle_output_offline(t);
-    handle_output_oops(t, close_handle_func);
+#ifdef WIN32
+    usb_kick(t->usb, close_handle_func);
+#else
+    usb_kick(t->usb);
+#endif
 }
 
 // TODO: Unplug -> Replug -> Unplug confuses the devices list
@@ -328,12 +316,6 @@ void kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPIHANDLE)){
 */
 void *output_thread(void *_t, struct dll_io_bridge * _io_bridge)
 {
-    // TODO: This will only work in the case where there is only one device connected for now
-    // TODO: Locks?
-    started_output_cleanup = 0; 
-    ended_output_cleanup = 0;
-
-     
     o_bridge = _io_bridge;
 
     atransport *t = (atransport *)_t;
@@ -370,16 +352,7 @@ void *output_thread(void *_t, struct dll_io_bridge * _io_bridge)
             break;
         }
     }
-    // this code rarely executes if we are killing IO (since it will be killed from read_from_remote)
-    if (started_output_cleanup && ended_output_cleanup) {
-      D("Already cleaned (in output thread)\n");
-      return NULL; // we're safe
-    } else if (started_output_cleanup && !ended_output_cleanup) {
-      printf("******* BUG: Undefined behavior in race detected (in output thread)!\n");
-      return NULL;
-    }
 
-    started_output_cleanup = 1;
     handle_output_offline(t);
 oops:
 #ifdef WIN32
@@ -387,7 +360,6 @@ oops:
 #else
     handle_output_oops(t, NULL);
 #endif
-    ended_output_cleanup = 1;
     return NULL;
 }
 
@@ -971,6 +943,17 @@ int list_transports(char *buf, size_t  bufsize, int long_listing)
     p[0] = 0;
     adb_mutex_unlock(&transport_lock);
     return p - buf;
+}
+
+void dump_transports()
+{
+    char             buffer[1024];
+    int              len;
+
+    len = list_transports(buffer, sizeof(buffer)-1, 0);
+
+    buffer[len] = '\0';
+    D("Open Transports: %s\n", buffer);
 }
 
 

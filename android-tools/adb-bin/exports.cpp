@@ -63,11 +63,9 @@ DLL_EXPORT void on_kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPI
     return adb_query(service);
   }
 
-#ifdef __APPLE__
-  DLL_EXPORT void kill_threads() {
-    should_kill_device_loop();
+  DLL_EXPORT void kill_device_loop() {
+    _kill_device_loop();
   }
-#endif
 
   DLL_EXPORT void on_kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPIHANDLE)) {
     kill_io_pump(t, close_handle_func);
@@ -91,6 +89,10 @@ DLL_EXPORT void on_kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPI
   // returns length written (and 0 when done)
   DLL_EXPORT int write_fd(int fd, char * buf, int len) {
     return adb_write(fd, (void *)buf, len);
+  }
+
+  DLL_EXPORT void close_fd(int fd) {
+    adb_close(fd);
   }
 
   //============================
