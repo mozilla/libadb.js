@@ -121,6 +121,7 @@ build: adb helper
 
 clean:
 	rm -rf addon/data/$(PLATFORM)
+	rm -rf helper/data/$(PLATFORM)
 	rm -f $(ADB_PACKAGE)
 	$(MAKE) -C android-tools clean
 
