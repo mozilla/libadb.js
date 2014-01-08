@@ -4,6 +4,9 @@ addon/data/linux/adb
 addon/data/linux64/adb
 addon/data/win32/adb
 
+# The helper/ subdirectory to which ADB binaries get copied.
+helper/data
+
 # native code objects not covered by standard global gitignores
 android-tools/adb-bin/adb
 android-tools/adb-bin/*.obj
