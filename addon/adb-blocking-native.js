@@ -6,7 +6,7 @@
 
 const { Cu } = require("chrome");
 Cu.import("resource://gre/modules/ctypes.jsm");
-const { platform } = require("system");
+const { platform } = require("sdk/system");
 
 const { Instantiator } = require("adb/ctypes-instantiator");
 const { unpackPtr, atransport, AdbCloseHandleType, NULL, CallbackType } =

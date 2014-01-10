@@ -29,14 +29,14 @@ const deviceTracker = require("adb/adb-device-tracker");
 const fileTransfer = require("adb/adb-file-transfer");
 const commandRunner = require("adb/adb-command-runner");
 const blockingNative = require("adb/adb-blocking-native");
-const timers = require("timers");
-const URL = require("url");
-const env = require("api-utils/environment").env;
-const File = require("file");
+const timers = require("sdk/timers");
+const URL = require("sdk/url");
+const env = require("sdk/system/environment").env;
+const File = require("sdk/io/file");
 const TmpD = require("sdk/system").pathFor("TmpD");
 
-const self = require("self");
-const { platform } = require("system");
+const self = require("sdk/self");
+const { platform } = require("sdk/system");
 
 Cu.import("resource://gre/modules/Services.jsm");
 
@@ -48,7 +48,7 @@ let platformDir;
 if (platform === "winnt") {
   platformDir = "win32";
 } else if (platform === "linux") {
-  let is64bit = (require("runtime").XPCOMABI.indexOf("x86_64") == 0);
+  let is64bit = (require("sdk/system/runtime").XPCOMABI.indexOf("x86_64") == 0);
   if (is64bit) {
     platformDir = "linux64";
   } else {
