@@ -39,6 +39,7 @@ const self = require("sdk/self");
 const { platform } = require("sdk/system");
 
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/ctypes.jsm");
 
 let serverWorker, ioWorker, utilWorker;
 
@@ -189,7 +190,7 @@ exports = module.exports = {
 
     console.debug("killAck received");
     // this ioWorker writes to the die_fd which wakes of the fdevent_loop which will then die and return to JS
-    let res = blockingNative.writeFully(server_die_fd, "ctypes.int(0xDEAD)", 4);
+    let res = blockingNative.writeFully(server_die_fd, ctypes.int(0xDEAD), 4);
     console.debug("Finished writing to die_fd ret=" + JSON.stringify(res));
     blockingNative.waitForServerDeath();
     console.debug("Done waiting for server death");
