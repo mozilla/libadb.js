@@ -23,6 +23,7 @@ const URL_PREFIX = module.uri.replace(/adb\.js/, "");
 const WORKER_URL_SERVER = URL_PREFIX + "adb-server-thread.js";
 const WORKER_URL_IO = URL_PREFIX + "adb-io-thread.js";
 const WORKER_URL_UTIL = URL_PREFIX + "adb-utility-thread.js";
+const WORKER_URL_DEVICE_POLL = URL_PREFIX + "adb-device-poll-thread.js";
 
 const EventedChromeWorker = require("adb/evented-chrome-worker").EventedChromeWorker;
 const deviceTracker = require("adb/adb-device-tracker");
@@ -268,6 +269,14 @@ exports._startAdbInBackground = function startAdbInBackground() {
   serverWorker = new EventedChromeWorker(WORKER_URL_SERVER, "server_thread", context);
   ioWorker = new EventedChromeWorker(WORKER_URL_IO, "io_thread", context);
   utilWorker = new EventedChromeWorker(WORKER_URL_UTIL, "util_thread", context);
+
+  serverWorker.once("spawn-device-loop", function () {
+    let devicePollWorker = serverWorker.newWorker(WORKER_URL_DEVICE_POLL, "device_poll_thread");
+    devicePollWorker.emitAndForget("init", { libPath: context.libPath,
+                                             driversPath: context.driversPath,
+                                             platform: context.platform,
+                                             winusbPath: context.winusbPath });
+  });
 
   deviceTracker.start(serverWorker);
 

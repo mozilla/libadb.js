@@ -14,7 +14,6 @@ const JS_MESSAGE = URL_PREFIX + "js-message.js";
 const COMMON_MESSAGE_HANDLER = URL_PREFIX + "common-message-handler.js";
 
 const WORKER_URL_IO_THREAD_SPAWNER = URL_PREFIX + "adb-io-thread-spawner.js";
-const WORKER_URL_DEVICE_POLL = URL_PREFIX + "adb-device-poll-thread.js";
 
 importScripts(INSTANTIATOR_URL,
               EVENTED_CHROME_WORKER_URL,
@@ -66,13 +65,7 @@ let jsMsgCallback = JsMsgType.ptr(CommonMessageHandler(worker, console, function
       return JsMessage.pack(0, Number);
     case "spawn-device-loop":
       console.debug("spawnD called from C");
-      worker.runOnPeerThread(function spawnD_task(workerURI) {
-        let devicePollWorker = this.newWorker(workerURI, "device_poll_thread");
-        devicePollWorker.emitAndForget("init", { libPath: context.libPath,
-                                                 driversPath: context.driversPath,
-                                                 platform: context.platform,
-                                                 winusbPath: context.winusbPath });
-      }, WORKER_URL_DEVICE_POLL);
+      worker.emitAndForget("spawn-device-loop", {});
       return JsMessage.pack(0, Number);
     default:
       console.log("Unknown message: " + channel);
