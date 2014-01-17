@@ -87,9 +87,6 @@
     }
   }
   EventedChromeWorker.prototype = {
-    newWorker: function make(url, args) {
-      return new EventedChromeWorker(url, args, this.context);
-    },
 
     emit: function emit(msg, args, onResponse) {
       if (!onResponse) {
