@@ -24,6 +24,7 @@ const WORKER_URL_SERVER = URL_PREFIX + "adb-server-thread.js";
 const WORKER_URL_IO = URL_PREFIX + "adb-io-thread.js";
 const WORKER_URL_UTIL = URL_PREFIX + "adb-utility-thread.js";
 const WORKER_URL_DEVICE_POLL = URL_PREFIX + "adb-device-poll-thread.js";
+const WORKER_URL_IO_THREAD_SPAWNER = URL_PREFIX + "adb-io-thread-spawner.js";
 
 const EventedChromeWorker = require("adb/evented-chrome-worker").EventedChromeWorker;
 const deviceTracker = require("adb/adb-device-tracker");
@@ -276,6 +277,29 @@ exports._startAdbInBackground = function startAdbInBackground() {
                                              driversPath: context.driversPath,
                                              platform: context.platform,
                                              winusbPath: context.winusbPath });
+  });
+
+  serverWorker.once("spawn-io-threads", function ({ t_ptrS }) {
+    let inputThread = serverWorker.newWorker(WORKER_URL_IO_THREAD_SPAWNER, "input_thread");
+    inputThread.emitAndForget("init",
+      { libPath: context.libPath,
+        threadName: "device_input_thread",
+        t_ptrS: t_ptrS,
+        platform: context.platform,
+        driversPath: context.driversPath
+      });
+
+    let outputThread = serverWorker.newWorker(WORKER_URL_IO_THREAD_SPAWNER, "output_thread");
+    outputThread.emitAndForget("init",
+      { libPath: context.libPath,
+        threadName: "device_output_thread",
+        t_ptrS: t_ptrS,
+        platform: context.platform,
+        driversPath: context.driversPath
+      });
+
+    context.outputThread = outputThread;
+    context.t_ptrS = t_ptrS;
   });
 
   deviceTracker.start(serverWorker);
