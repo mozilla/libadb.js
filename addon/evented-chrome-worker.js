@@ -69,15 +69,6 @@
       }
     }).bind(this);
 
-    // magic (the other half of runOnPeerThread)
-    this._taskIdx = this.listenAndForget("_task", (function({ task, args }) {
-      console.debug("Calling taskFn: (" + task + ")");
-      console.debug("with args: " + args);
-      let ja = JSON.parse(args);
-      let taskFn = eval("(" + task + ")");
-      return taskFn.apply(this, ja);
-    }).bind(this));
-
     // If we are on the main thread
     if (isUIThread) {
       // start a log listener
@@ -87,8 +78,12 @@
       });
       // add ourselves to __workers (to be terminated later)
       this.context.__workers.push(this);
-      this._restartIdx = this.listen("restart-me", this.context.restart.bind(context));
-      this._closeIdx = this.listen("close-me", this.context.close.bind(context));
+      this._restartIdx = this.listen("restart-me", () => {
+        this.context.restart();
+      });
+      this._closeIdx = this.listen("close-me", () => {
+        this.context.close();
+      });
     }
   }
   EventedChromeWorker.prototype = {
@@ -169,19 +164,11 @@
     },
 
     terminate: function terminate() {
-      this.freeListener("_task", this._taskIdx);
       this.freeListener("log", this._logIdx);
       this.freeListener("restart-me", this._restartIdx);
       this.freeListener("close-me", this._closeIdx);
       this.worker.terminate();
       return this;
-    },
-
-    runOnPeerThread: function runOnThread(task /*, serializableArgs... */) {
-      let serializableArgs = Array.prototype.slice.call(arguments, 1);
-      let args = JSON.stringify(serializableArgs);
-
-      this.emitAndForget("_task", { task: task.toString(), args: args });
     },
 
     _slug: function _slug(msg, count) {

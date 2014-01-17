@@ -272,7 +272,7 @@ exports._startAdbInBackground = function startAdbInBackground() {
   utilWorker = new EventedChromeWorker(WORKER_URL_UTIL, "util_thread", context);
 
   serverWorker.once("spawn-device-loop", function () {
-    let devicePollWorker = serverWorker.newWorker(WORKER_URL_DEVICE_POLL, "device_poll_thread");
+    let devicePollWorker = serverWorker.newWorker(WORKER_URL_DEVICE_POLL, "device_poll_thread", context);
     devicePollWorker.emitAndForget("init", { libPath: context.libPath,
                                              driversPath: context.driversPath,
                                              platform: context.platform,
@@ -280,7 +280,7 @@ exports._startAdbInBackground = function startAdbInBackground() {
   });
 
   serverWorker.once("spawn-io-threads", function ({ t_ptrS }) {
-    let inputThread = serverWorker.newWorker(WORKER_URL_IO_THREAD_SPAWNER, "input_thread");
+    let inputThread = serverWorker.newWorker(WORKER_URL_IO_THREAD_SPAWNER, "input_thread", context);
     inputThread.emitAndForget("init",
       { libPath: context.libPath,
         threadName: "device_input_thread",
@@ -289,7 +289,7 @@ exports._startAdbInBackground = function startAdbInBackground() {
         driversPath: context.driversPath
       });
 
-    let outputThread = serverWorker.newWorker(WORKER_URL_IO_THREAD_SPAWNER, "output_thread");
+    let outputThread = serverWorker.newWorker(WORKER_URL_IO_THREAD_SPAWNER, "output_thread", context);
     outputThread.emitAndForget("init",
       { libPath: context.libPath,
         threadName: "device_output_thread",
