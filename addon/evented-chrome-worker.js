@@ -78,27 +78,17 @@
       return taskFn.apply(this, ja);
     }).bind(this));
 
-    // If we are the worker
-    if (!isUIThread) {
-      // on the main thread
-      this.runOnPeerThread(function() {
-        // start a log listener
-        this._logIdx = this.listen("log", function log(args) {
-          let channel = args.shift();
-          console[channel].apply(console, Array.prototype.slice.call(args, 0));
-        });
-        // add ourselves to __workers (to be terminated later)
-        this.context.__workers.push(this);
-        // start a restart-me listener
-        this._restartIdx = this.listen("restart-me", (function restart_me() {
-          this.context.restart();
-        }).bind(this));
-        this._closeIdx = this.listen("close-me", (function close_me() {
-          this.context.close();
-        }).bind(this));
+    // If we are on the main thread
+    if (isUIThread) {
+      // start a log listener
+      this._logIdx = this.listen("log", function log(args) {
+        let channel = args.shift();
+        console[channel].apply(console, Array.prototype.slice.call(args, 0));
       });
-    } else {
-
+      // add ourselves to __workers (to be terminated later)
+      this.context.__workers.push(this);
+      this._restartIdx = this.listen("restart-me", this.context.restart.bind(context));
+      this._closeIdx = this.listen("close-me", this.context.close.bind(context));
     }
   }
   EventedChromeWorker.prototype = {
