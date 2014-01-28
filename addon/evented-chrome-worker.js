@@ -69,42 +69,24 @@
       }
     }).bind(this);
 
-    // magic (the other half of runOnPeerThread)
-    this._taskIdx = this.listenAndForget("_task", (function({ task, args }) {
-      console.debug("Calling taskFn: (" + task + ")");
-      console.debug("with args: " + args);
-      let ja = JSON.parse(args);
-      let taskFn = eval("(" + task + ")");
-      return taskFn.apply(this, ja);
-    }).bind(this));
-
-    // If we are the worker
-    if (!isUIThread) {
-      // on the main thread
-      this.runOnPeerThread(function() {
-        // start a log listener
-        this._logIdx = this.listen("log", function log(args) {
-          let channel = args.shift();
-          console[channel].apply(console, Array.prototype.slice.call(args, 0));
-        });
-        // add ourselves to __workers (to be terminated later)
-        this.context.__workers.push(this);
-        // start a restart-me listener
-        this._restartIdx = this.listen("restart-me", (function restart_me() {
-          this.context.restart();
-        }).bind(this));
-        this._closeIdx = this.listen("close-me", (function close_me() {
-          this.context.close();
-        }).bind(this));
+    // If we are on the main thread
+    if (isUIThread) {
+      // start a log listener
+      this._logIdx = this.listen("log", function log(args) {
+        let channel = args.shift();
+        console[channel].apply(console, Array.prototype.slice.call(args, 0));
       });
-    } else {
-
+      // add ourselves to __workers (to be terminated later)
+      this.context.__workers.push(this);
+      this._restartIdx = this.listen("restart-me", () => {
+        this.context.restart();
+      });
+      this._closeIdx = this.listen("close-me", () => {
+        this.context.close();
+      });
     }
   }
   EventedChromeWorker.prototype = {
-    newWorker: function make(url, args) {
-      return new EventedChromeWorker(url, args, this.context);
-    },
 
     emit: function emit(msg, args, onResponse) {
       if (!onResponse) {
@@ -179,19 +161,11 @@
     },
 
     terminate: function terminate() {
-      this.freeListener("_task", this._taskIdx);
       this.freeListener("log", this._logIdx);
       this.freeListener("restart-me", this._restartIdx);
       this.freeListener("close-me", this._closeIdx);
       this.worker.terminate();
       return this;
-    },
-
-    runOnPeerThread: function runOnThread(task /*, serializableArgs... */) {
-      let serializableArgs = Array.prototype.slice.call(arguments, 1);
-      let args = JSON.stringify(serializableArgs);
-
-      this.emitAndForget("_task", { task: task.toString(), args: args });
     },
 
     _slug: function _slug(msg, count) {

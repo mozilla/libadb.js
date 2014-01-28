@@ -30,11 +30,10 @@
               }, lib);
 
     return {
-      writeFully: function writeFully(fd, toWriteS, length) { 
+      writeFully: function writeFully(fd, cTypesVal, length) {
         let write = I.use("write_fd");
         let close = I.use("close_fd");
-        let val = eval(toWriteS);
-        let buffer = ctypes.cast(val.address(), ctypes.char.ptr);
+        let buffer = ctypes.cast(cTypesVal.address(), ctypes.char.ptr);
         let r;
 
         while(length > 0) {

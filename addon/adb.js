@@ -23,6 +23,8 @@ const URL_PREFIX = module.uri.replace(/adb\.js/, "");
 const WORKER_URL_SERVER = URL_PREFIX + "adb-server-thread.js";
 const WORKER_URL_IO = URL_PREFIX + "adb-io-thread.js";
 const WORKER_URL_UTIL = URL_PREFIX + "adb-utility-thread.js";
+const WORKER_URL_DEVICE_POLL = URL_PREFIX + "adb-device-poll-thread.js";
+const WORKER_URL_IO_THREAD_SPAWNER = URL_PREFIX + "adb-io-thread-spawner.js";
 
 const EventedChromeWorker = require("adb/evented-chrome-worker").EventedChromeWorker;
 const deviceTracker = require("adb/adb-device-tracker");
@@ -39,6 +41,7 @@ const self = require("sdk/self");
 const { platform } = require("sdk/system");
 
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/ctypes.jsm");
 
 let serverWorker, ioWorker, utilWorker;
 
@@ -189,7 +192,7 @@ exports = module.exports = {
 
     console.debug("killAck received");
     // this ioWorker writes to the die_fd which wakes of the fdevent_loop which will then die and return to JS
-    let res = blockingNative.writeFully(server_die_fd, "ctypes.int(0xDEAD)", 4);
+    let res = blockingNative.writeFully(server_die_fd, ctypes.int(0xDEAD), 4);
     console.debug("Finished writing to die_fd ret=" + JSON.stringify(res));
     blockingNative.waitForServerDeath();
     console.debug("Done waiting for server death");
@@ -267,6 +270,37 @@ exports._startAdbInBackground = function startAdbInBackground() {
   serverWorker = new EventedChromeWorker(WORKER_URL_SERVER, "server_thread", context);
   ioWorker = new EventedChromeWorker(WORKER_URL_IO, "io_thread", context);
   utilWorker = new EventedChromeWorker(WORKER_URL_UTIL, "util_thread", context);
+
+  serverWorker.once("spawn-device-loop", function () {
+    let devicePollWorker = new EventedChromeWorker(WORKER_URL_DEVICE_POLL, "device_poll_thread", context);
+    devicePollWorker.emitAndForget("init", { libPath: context.libPath,
+                                             driversPath: context.driversPath,
+                                             platform: context.platform,
+                                             winusbPath: context.winusbPath });
+  });
+
+  serverWorker.once("spawn-io-threads", function ({ t_ptrS }) {
+    let inputThread = new EventedChromeWorker(WORKER_URL_IO_THREAD_SPAWNER, "input_thread", context);
+    inputThread.emitAndForget("init",
+      { libPath: context.libPath,
+        threadName: "device_input_thread",
+        t_ptrS: t_ptrS,
+        platform: context.platform,
+        driversPath: context.driversPath
+      });
+
+    let outputThread = new EventedChromeWorker(WORKER_URL_IO_THREAD_SPAWNER, "output_thread", context);
+    outputThread.emitAndForget("init",
+      { libPath: context.libPath,
+        threadName: "device_output_thread",
+        t_ptrS: t_ptrS,
+        platform: context.platform,
+        driversPath: context.driversPath
+      });
+
+    context.outputThread = outputThread;
+    context.t_ptrS = t_ptrS;
+  });
 
   deviceTracker.start(serverWorker);
 

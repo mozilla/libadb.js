@@ -13,9 +13,6 @@ const ADB_TYPES = URL_PREFIX + "adb-types.js";
 const JS_MESSAGE = URL_PREFIX + "js-message.js";
 const COMMON_MESSAGE_HANDLER = URL_PREFIX + "common-message-handler.js";
 
-const WORKER_URL_IO_THREAD_SPAWNER = URL_PREFIX + "adb-io-thread-spawner.js";
-const WORKER_URL_DEVICE_POLL = URL_PREFIX + "adb-device-poll-thread.js";
-
 importScripts(INSTANTIATOR_URL,
               EVENTED_CHROME_WORKER_URL,
               CONSOLE_URL,
@@ -40,39 +37,11 @@ let jsMsgCallback = JsMsgType.ptr(CommonMessageHandler(worker, console, function
       let [ t_ptr ] = JsMessage.unpack(args, ctypes.void_t.ptr);
       console.debug("spawnIO was called from C, with voidPtr: " + t_ptr.toString());
       let t_ptrS = packPtr(t_ptr);
-      worker.runOnPeerThread(function spawnIO_task(t_ptrS, workerURI) {
-        let inputThread = this.newWorker(workerURI, "input_thread");
-        inputThread.emitAndForget("init",
-          { libPath: context.libPath,
-            threadName: "device_input_thread",
-            t_ptrS: t_ptrS,
-            platform: context.platform,
-            driversPath: context.driversPath
-          });
-
-        let outputThread = this.newWorker(workerURI, "output_thread");
-        outputThread.emitAndForget("init",
-          { libPath: context.libPath,
-            threadName: "device_output_thread",
-            t_ptrS: t_ptrS,
-            platform: context.platform,
-            driversPath: context.driversPath
-          });
-
-        this.context.outputThread = outputThread;
-        this.context.t_ptrS = t_ptrS;
-
-      }, t_ptrS, WORKER_URL_IO_THREAD_SPAWNER);
+      worker.emitAndForget("spawn-io-threads", { t_ptrS: t_ptrS });
       return JsMessage.pack(0, Number);
     case "spawn-device-loop":
       console.debug("spawnD called from C");
-      worker.runOnPeerThread(function spawnD_task(workerURI) {
-        let devicePollWorker = this.newWorker(workerURI, "device_poll_thread");
-        devicePollWorker.emitAndForget("init", { libPath: context.libPath,
-                                                 driversPath: context.driversPath,
-                                                 platform: context.platform,
-                                                 winusbPath: context.winusbPath });
-      }, WORKER_URL_DEVICE_POLL);
+      worker.emitAndForget("spawn-device-loop", {});
       return JsMessage.pack(0, Number);
     default:
       console.log("Unknown message: " + channel);
