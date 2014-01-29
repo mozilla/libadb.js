@@ -65,8 +65,8 @@ static void remove_smart_socket_listeners(void);
 ADB_MUTEX_DEFINE( threads_active_lock );
 
 // TODO: Dynamically remove dead threads
-adb_thread_ptr_array_list * __adb_threads_active;
-str_array_list * __adb_tags_active;
+adb_thread_ptr_array_list * __adb_threads_active = NULL;
+str_array_list * __adb_tags_active = NULL;
 
 // a list of fds that need to be closed on exit
 int_array_list * _fds;
@@ -149,38 +149,42 @@ void set_device_loop_state(int state) {
 void cleanup_all() {
   int err = 0;
   int i = 0;
-  D("Killing threads!\n");
-  int len = __adb_threads_active->length;
-  for (i = 0; i < len; i++) {
-    adb_thread_t *thread = __adb_threads_active->base[i];
-    D("Killing thread: %d, %p\n", i, thread);
+  if (__adb_threads_active) {
+      D("Killing threads!\n");
+      int len = __adb_threads_active->length;
+      for (i = 0; i < len; i++) {
+        adb_thread_t *thread = __adb_threads_active->base[i];
+        D("Killing thread: %d, %p\n", i, thread);
 
-    /*err = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    if (err < 0) {
-      D("ERROR: set cancel state %d\n", err);
-    }
+        /*err = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+        if (err < 0) {
+          D("ERROR: set cancel state %d\n", err);
+        }
 
-    err = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-    if (err < 0) {
-      D("ERROR: set cancel type %d\n", err);
-    }*/
+        err = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+        if (err < 0) {
+          D("ERROR: set cancel type %d\n", err);
+        }*/
 
-    err = adb_thread_cancel(*thread);
-    if (err < 0) {
-      D("ERROR: cancelling %d\n", err);
-    }
+        err = adb_thread_cancel(*thread);
+        if (err < 0) {
+          D("ERROR: cancelling %d\n", err);
+        }
 
-    err = adb_thread_join(*thread);
-    if (err < 0) {
-      D("ERROR: joining %d\n", err);
-    }
+        err = adb_thread_join(*thread);
+        if (err < 0) {
+          D("ERROR: joining %d\n", err);
+        }
 
-    free(thread);
-    free(__adb_tags_active->base[i]);
-    D("Freed thread: %d\n", i);
+        free(thread);
+        free(__adb_tags_active->base[i]);
+        D("Freed thread: %d\n", i);
+      }
+      free_adb_thread_ptr_array_list(__adb_threads_active);
+      __adb_threads_active = NULL;
+      free_str_array_list(__adb_tags_active);
+      __adb_tags_active = NULL;
   }
-  free_adb_thread_ptr_array_list(__adb_threads_active);
-  free_str_array_list(__adb_tags_active);
   D("Killed all threads!\n");
 #ifdef WIN32
     fclose(LOG_FILE); // close the log

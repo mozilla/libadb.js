@@ -249,6 +249,13 @@ exports = (function(exports) {
   };
   */
 
+  exports["test shutdown and start"] = function (assert, done) {
+    ADB.close();
+    ADB.start();
+    assert.pass("No crash.");
+    done();
+  };
+
   exports["test zz after"] = function(assert, done) {
     if (ADB.didRunInitially) {
       try {
