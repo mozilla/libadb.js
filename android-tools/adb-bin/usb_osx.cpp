@@ -264,6 +264,24 @@ AndroidInterfaceAdded(void *refCon, io_iterator_t iterator)
             continue;
         }
 
+        // The original ADB seems to leave the pipes in a bad state. To
+        // work around this clear them here before they're are used.
+        if (handle->bulkIn) {
+            kr = (*iface)->ClearPipeStallBothEnds(iface,
+                    handle->bulkIn);
+            if (kr != 0) {
+                DBG("could not clear input pipe; result %d", kr);
+            }
+        }
+
+        if (handle->bulkOut) {
+            kr = (*iface)->ClearPipeStallBothEnds(iface,
+                    handle->bulkOut);
+            if (kr != 0) {
+                DBG("could not clear output pipe; result %d", kr);
+            }
+        }
+
         DBG("AndroidDeviceAdded calling register_usb_transport\n");
         register_usb_transport(handle, (serial[0] ? serial : NULL), devpath, 1);
 
@@ -376,6 +394,7 @@ CheckInterface(IOUSBInterfaceInterface **interface, UInt16 vendor, UInt16 produc
 
 err_get_pipe_props:
     free(handle);
+    handle = NULL;
 err_bad_adb_interface:
 err_get_interface_class:
 err_get_num_ep:
