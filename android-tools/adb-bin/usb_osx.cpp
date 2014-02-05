@@ -265,7 +265,7 @@ AndroidInterfaceAdded(void *refCon, io_iterator_t iterator)
         }
 
         // The original ADB seems to leave the pipes in a bad state. To
-        // work around this clear them here before they're are used.
+        // work around this clear them here before they're used.
         if (handle->bulkIn) {
             kr = (*iface)->ClearPipeStallBothEnds(iface,
                     handle->bulkIn);
