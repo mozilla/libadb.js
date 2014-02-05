@@ -35,7 +35,7 @@ ifndef PLATFORM
   endif
 endif
 
-LIBADB_VERSION = 0.8
+LIBADB_VERSION = 0.9
 
 # The location of libadb for making ADB. Set this variable to "local" to build 
 # libadb.{so, dll} from source locally. Set to "remote" to grab prebuilt ADB 
