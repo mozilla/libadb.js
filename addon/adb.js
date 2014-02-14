@@ -279,7 +279,7 @@ exports._startAdbInBackground = function startAdbInBackground() {
                                              winusbPath: context.winusbPath });
   });
 
-  serverWorker.once("spawn-io-threads", function ({ t_ptrS }) {
+  serverWorker.listen("spawn-io-threads", function ({ t_ptrS }) {
     let inputThread = new EventedChromeWorker(WORKER_URL_IO_THREAD_SPAWNER, "input_thread", context);
     inputThread.emitAndForget("init",
       { libPath: context.libPath,
