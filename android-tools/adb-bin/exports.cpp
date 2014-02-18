@@ -36,6 +36,7 @@ DLL_EXPORT void on_kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPI
 
   DLL_EXPORT void initialize() {
     adb_sysdeps_init();
+    adb_trace_init();
   }
 
   DLL_EXPORT void install_js_msg(FunctionJsMsg js_msg) {
