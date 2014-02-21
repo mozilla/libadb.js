@@ -186,7 +186,7 @@ exports = module.exports = {
 
     blockingNative.killDeviceLoop();
 
-    if (context.outputThread) {
+    if (context.t_ptrS) {
       blockingNative.killIOPump(context.t_ptrS);
     }
 
@@ -280,6 +280,9 @@ exports._startAdbInBackground = function startAdbInBackground() {
   });
 
   serverWorker.listen("spawn-io-threads", function ({ t_ptrS }) {
+    // Store the transport pointer so the io pump can be killed if the library
+    // is shutdown.
+    context.t_ptrS = t_ptrS;
     let inputThread = new EventedChromeWorker(WORKER_URL_IO_THREAD_SPAWNER, "input_thread", context);
     inputThread.emitAndForget("init",
       { libPath: context.libPath,
@@ -290,16 +293,18 @@ exports._startAdbInBackground = function startAdbInBackground() {
       });
 
     let outputThread = new EventedChromeWorker(WORKER_URL_IO_THREAD_SPAWNER, "output_thread", context);
-    outputThread.emitAndForget("init",
+    outputThread.emit("init",
       { libPath: context.libPath,
         threadName: "device_output_thread",
         t_ptrS: t_ptrS,
         platform: context.platform,
         driversPath: context.driversPath
-      });
-
-    context.outputThread = outputThread;
-    context.t_ptrS = t_ptrS;
+      },
+      function () {
+        // The io pump is dead, no need to keep the transport pointer.
+        context.t_ptrS = null;
+      }
+    );
   });
 
   deviceTracker.start(serverWorker);

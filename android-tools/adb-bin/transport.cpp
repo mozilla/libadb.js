@@ -292,6 +292,9 @@ void kill_io_pump(atransport * t, bool (*close_handle_func)(ADBAPIHANDLE)){
         // Nothing to do.
         return;
     }
+    if (!t->kicked) {
+        return;
+    }
 #ifdef WIN32
     usb_kick(t->usb, close_handle_func);
 #else
