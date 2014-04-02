@@ -138,7 +138,8 @@ clean:
 #   Download the zip
 # * if there exists a zip, unzip it
 # * if we are installing locally, run the build command
-adb:
+adb: addon/data/$(PLATFORM)/adb
+addon/data/$(PLATFORM)/adb:
 	mkdir -p addon/data/$(PLATFORM)
 	cd addon/data/$(PLATFORM) && rm -rf adb $(ADB_BINARIES)
 	mkdir addon/data/$(PLATFORM)/adb
@@ -155,17 +156,18 @@ adb:
 	  cp $(ADB_LIBS) $(ADB_DATA_PATH); \
 	fi;
 
-helper:
+helper: helper/data/$(PLATFORM)/adb
+helper/data/$(PLATFORM)/adb:
 	mkdir -p helper/data/$(PLATFORM)/adb
 	cp addon/data/$(PLATFORM)/adb/* helper/data/$(PLATFORM)/adb/
 
-run:
+run: addon/data/$(PLATFORM)/adb helper/data/$(PLATFORM)/adb
 	cd addon-sdk && . bin/activate && cd ../helper && cfx run --package-path ../addon/ $(BIN_ARG) $(PROFILE_ARG)
 
-package:
+package: addon/data/$(PLATFORM)/adb helper/data/$(PLATFORM)/adb
 	cd addon-sdk && . bin/activate && cd ../helper && cfx xpi --package-path ../addon/
 
-test:
+test: addon/data/$(PLATFORM)/adb helper/data/$(PLATFORM)/adb
 	cd addon-sdk && . bin/activate && cd ../addon && cfx test --verbose $(BIN_ARG) $(TEST_ARG) $(PROFILE_ARG)
 
 help:
