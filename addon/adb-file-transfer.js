@@ -11,7 +11,7 @@
 
 const { Cu, Cc, Ci } = require("chrome");
 
-const Promise = require("sdk/core/promise");
+const promise = require("sdk/core/promise");
 const { Class } = require("sdk/core/heritage");
 const client = require("adb/adb-client");
 let { TextEncoder, TextDecoder } = Cu.import("resource://gre/modules/Services.jsm");
@@ -25,7 +25,7 @@ function debug() {
 // aFrom and aDest are full paths.
 // XXX we should STAT the remote path before sending.
 exports.pushFile = function adb_push(aFrom, aDest) {
-  let deferred = Promise.defer();
+  let deferred = promise.defer();
   let socket;
   let state;
   let fileSize;

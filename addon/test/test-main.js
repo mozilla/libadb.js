@@ -14,7 +14,7 @@
 exports = (function(exports) {
   let ADB = null;
   const Timer = require("timer");
-  const Promise = require("sdk/core/promise");
+  const promise = require("sdk/core/promise");
   const { Cu, Ci } = require("chrome");
   const { OS } = Cu.import("resource://gre/modules/osfile.jsm", {});
 
