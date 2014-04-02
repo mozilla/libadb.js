@@ -17,7 +17,7 @@
  */
 
 const { Cc, Ci, Cr, Cu, ChromeWorker } = require("chrome");
-const Promise = require("sdk/core/promise");
+const promise = require("sdk/core/promise");
 
 const URL_PREFIX = module.uri.replace(/adb\.js/, "");
 const WORKER_URL_SERVER = URL_PREFIX + "adb-server-thread.js";
@@ -125,7 +125,7 @@ exports = module.exports = {
 
 
   push: function pushFile(srcPath, destPath) {
-    let deferred = Promise.defer();
+    let deferred = promise.defer();
     if (!deviceTracker.hasDevice) {
       deferred.reject(DEVICE_NOT_CONNECTED);
       return deferred.promise;
@@ -139,7 +139,7 @@ exports = module.exports = {
   },
 
   forwardPort: function forwardPort(port, remote) {
-    let deferred = Promise.defer();
+    let deferred = promise.defer();
     if (!deviceTracker.hasDevice) {
       deferred.reject(DEVICE_NOT_CONNECTED);
       return deferred.promise;
@@ -154,7 +154,7 @@ exports = module.exports = {
   },
 
   shell: function shell(shellCommand) {
-    let deferred = Promise.defer();
+    let deferred = promise.defer();
     if (!deviceTracker.hasDevice) {
       deferred.reject(DEVICE_NOT_CONNECTED);
       return deferred.promise;

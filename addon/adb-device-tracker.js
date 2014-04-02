@@ -13,7 +13,7 @@ const { Cc, Ci, Cr, Cu } = require("chrome");
 const { Class } = require("sdk/core/heritage");
 const client = require("adb/adb-client");
 
-const Promise = require("sdk/core/promise");
+const promise = require("sdk/core/promise");
 
 Cu.import("resource://gre/modules/Services.jsm");
 
@@ -37,7 +37,7 @@ module.exports = {
     for (let dev in devices) {
       buf.push([dev, devices[dev]]);
     }
-    return Promise.resolve(buf);
+    return promise.resolve(buf);
   },
 
   start: function(worker_) {

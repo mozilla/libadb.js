@@ -11,7 +11,7 @@
 
 const { Cu, Cc, Ci } = require("chrome");
 
-const Promise = require("sdk/core/promise");
+const promise = require("sdk/core/promise");
 const { Class } = require("sdk/core/heritage");
 const client = require("adb/adb-client");
 
@@ -21,7 +21,7 @@ function debug() {
 
 function runCommand(aCommand) {
   debug("runCommand " + aCommand);
-  let deferred = Promise.defer();
+  let deferred = promise.defer();
 
   let socket = client.connect();
   socket.s.onopen = function() {
