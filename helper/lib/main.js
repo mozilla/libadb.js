@@ -21,22 +21,32 @@ unload.when(function () {
 // start automatically start tracking devices
 adb.start();
 
-function onDeviceConnected(device) {
-  console.log("ADBHELPER - CONNECTED: " + device);
-  Devices.register(device, {
-    connect: function () {
-      let port = ConnectionManager.getFreeTCPPort();
-      // let local = "tcp:" + port;
-      let remote = "localfilesystem:/data/local/debugger-socket";
-      return adb.forwardPort(port, remote)
-                .then(() => port, console.error);
-    }
+let idToName = new Map();
+
+function onDeviceConnected(id) {
+  console.log("ADBHELPER - CONNECTED: " + id);
+  adb.getDeviceName().then(name => {
+    name = name.trim();
+    console.log("DEVICE NAME: " + name);
+    name = name || id; // Some devices might not have a pretty name
+    idToName.set(id, name);
+    Devices.register(name, {
+      connect: function () {
+        let port = ConnectionManager.getFreeTCPPort();
+        // let local = "tcp:" + port;
+        let remote = "localfilesystem:/data/local/debugger-socket";
+        return adb.forwardPort(port, remote)
+                  .then(() => port, console.error);
+      }
+    });
   });
 }
 
-function onDeviceDisconnected(device) {
-  console.log("ADBHELPER - DISCONNECTED: " + device);
-  Devices.unregister(device);
+function onDeviceDisconnected(id) {
+  console.log("ADBHELPER - DISCONNECTED: " + id);
+  let name = idToName.get(id);
+  Devices.unregister(name);
+  idToName.delete(id);
 }
 
 let observer = {

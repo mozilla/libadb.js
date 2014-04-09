@@ -169,6 +169,10 @@ exports = module.exports = {
     return deferred.promise;
   },
 
+  getDeviceName: function() {
+    return this.shell("getprop ro.product.name");
+  },
+
   listDevices: function listDevices() {
     return deviceTracker.listDevices();
   },
