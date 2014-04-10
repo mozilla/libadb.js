@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-'use strict';
+"use strict";
 
 /* Fake require statements so that the module dependency graph has web workers
   require("adb/adb-server-thread.js");
@@ -31,6 +31,7 @@ const deviceTracker = require("adb/adb-device-tracker");
 const fileTransfer = require("adb/adb-file-transfer");
 const commandRunner = require("adb/adb-command-runner");
 const blockingNative = require("adb/adb-blocking-native");
+const runningChecker = require("adb/adb-running-checker");
 const timers = require("sdk/timers");
 const URL = require("sdk/url");
 const env = require("sdk/system/environment").env;
@@ -119,8 +120,12 @@ exports = module.exports = {
     if (ready) {
       return;
     }
-    let startedSuccessfully = this._startAdbInBackground();
-    this.didRunInitially = startedSuccessfully;
+
+    // See if someone else's server is currently running, and kill if so
+    runningChecker.kill().then(() => {
+      let startedSuccessfully = this._startAdbInBackground();
+      this.didRunInitially = startedSuccessfully;
+    });
   },
 
 
@@ -169,6 +174,8 @@ exports = module.exports = {
     return deferred.promise;
   },
 
+
+
   getDeviceName: function() {
     return this.shell("getprop ro.product.name");
   },
@@ -215,19 +222,8 @@ exports = module.exports = {
 
 context.close = exports.close;
 
-function restart_helper() {
-  context.restart = exports.restart;
-}
-
 function reset() {
   server_die_fd = null;
-  context = { __workers: [], // this array is populated automatically by EventedChromeWorker
-              platform: platform,
-              driversPath: driversPath,
-              libPath: libPath
-            };
-  restart_helper();
-
   deviceTracker.reset();
   fileTransfer.reset();
   commandRunner.reset();
@@ -251,17 +247,18 @@ exports.restart = function restart() {
     // immediately after the native file descriptor write returns
     timers.setTimeout(function timeout() {
       reset();
-      exports._startAdbInBackground();
+      exports.start();
     }, 200);
   } else {
     console.error("ADB fatally died!");
     Services.obs.notifyObservers(null, "adb-fatal-death", null);
   }
 };
-restart_helper();
+context.restart = exports.restart;
 
 exports._startAdbInBackground = function startAdbInBackground() {
   hasStartedShutdown = false;
+  hasRestarted = false;
   this.ready = true;
 
   // catch the exception that is thrown when the shared library cannot be loaded
@@ -313,11 +310,12 @@ exports._startAdbInBackground = function startAdbInBackground() {
 
   deviceTracker.start(serverWorker);
 
-  serverWorker.emit("init", { libPath: libPath }, function initack() {
-    serverWorker.emit("start", { port: 5037, log_path: File.join(TmpD, "adb.log") }, function started(res) {
+  serverWorker.emit("init", { libPath: libPath }, () => {
+    serverWorker.emit("start", { port: 5037, log_path: File.join(TmpD, "adb.log") }, res => {
       console.debug("adb server thread returned: " + res.ret);
       if (res.ret == -1) {
         Services.obs.notifyObservers(null, "adb-port-in-use", null);
+        this.close();
       }
     });
   });
