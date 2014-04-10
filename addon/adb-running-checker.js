@@ -19,31 +19,40 @@ function debug() {
   console.debug.apply(console, ["ADB: "].concat(Array.prototype.slice.call(arguments, 0)));
 }
 
-exports.check = function check() {
+exports.check = () => {
+  return request("version").then(response => {
+    // TODO: Actually check the version number to make sure the daemon
+    //       supports the commands we want to use
+    return response && response.indexOf("001f") != -1;
+  });
+};
+
+exports.kill = () => request("kill");
+
+function request(type) {
   let deferred = promise.defer();
   let socket;
   let state;
 
-  debug("Asking for host:version");
+  debug("Asking for host:" + type);
 
   let runFSM = function runFSM(aData) {
     debug("runFSM " + state);
     switch(state) {
       case "start":
-        let req = client.createRequest("host:version");
+        let req = client.createRequest("host:" + type);
         socket.send(req);
-        state = "wait-version";
-        break
-      case "wait-version":
-        // TODO: Actually check the version number to make sure the daemon
-        //       supports the commands we want to use
+        state = "wait-reply";
+        break;
+      case "wait-reply":
         let { length, data } = client.unpackPacket(aData);
         debug("length: ", length, "data: ", data);
         socket.close();
-        deferred.resolve(data.indexOf("001f") != -1);
+        deferred.resolve(data);
         break;
       default:
         debug("Unexpected State: " + state);
+        socket.close();
         deferred.resolve(false);
     }
   };
