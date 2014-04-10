@@ -13,13 +13,23 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 Devices.helperAddonInstalled = true;
 
+// start automatically start tracking devices
+adb.start();
+
+// Ensure devices list is up to date, restarting the server if needed
+function refresh() {
+  if (!adb.ready) {
+    adb.restart();
+  }
+}
+
+Devices.on("refresh", refresh);
+
 unload.when(function () {
+  Devices.off("refresh", refresh);
   Devices.helperAddonInstalled = false;
   adb.close();
 });
-
-// start automatically start tracking devices
-adb.start();
 
 let idToName = new Map();
 
